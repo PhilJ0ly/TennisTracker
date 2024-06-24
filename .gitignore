@@ -1,0 +1,10 @@
+Lib/
+Library/
+Scripts/
+Include/
+yolov8x.pt
+input_video/
+share/
+runs/
+.env
+training/tennis-ball-detection-6/

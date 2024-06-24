@@ -1,0 +1,12 @@
+# Philippe Joly
+
+from ultralytics import YOLO
+
+model = YOLO('yolov8x')
+
+result = model.predict('input_video/input_video.mp4', save=True)
+
+# print(result)
+# print("\nBoxes:")
+# for box in result[0].boxes:
+#     print(box)
