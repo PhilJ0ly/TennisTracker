@@ -4,6 +4,7 @@ from utils import (read_video,
                    save_video)
 from trackers import PlayerTracker, BallTracker
 from court_line_detector import CourtLineDetector
+from mini_court import MiniCourt
 
 def main():
     #reading video
@@ -29,6 +30,10 @@ def main():
     ball_detections = ball_tracker.detect_frames(video_frames, read_from_stub=True, stub_path="trackers_stubs/ball_detections.pkl")
     ball_detections = ball_tracker.interpolate_ball(ball_detections)
 
+    #creating court
+    print("Creating mini court...")
+    mini_court = MiniCourt(video_frames[0])
+
     # Draw outputs
     print("Drawing Anotations...")
     ## draw player and ball bbox
@@ -37,6 +42,9 @@ def main():
 
     ## Draw court lines
     output_frames = court_line_detector.draw_kps_video(output_frames, court_kps)
+
+    ## Draw Minicourt
+    output_frames = mini_court.draw_mini_court(output_frames)
 
     ## Draw frame number
     for i, frame in enumerate(output_frames):
