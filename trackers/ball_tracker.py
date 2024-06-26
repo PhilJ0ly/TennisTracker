@@ -19,6 +19,38 @@ class BallTracker:
 
         return ball_detections
 
+    def get_ball_shot_frames(self, ball_detections):
+        ball_detections = [x.get(1,[]) for x in ball_detections]
+        df_ball_detections = pd.DataFrame(ball_detections, columns=["x1", "y1", "x2", "y2"])
+
+        df_ball_detections['mid_y'] = (df_ball_detections['y1']+df_ball_detections['y2'])/2
+        df_ball_detections['mid_y_rolling_mean'] = df_ball_detections['mid_y'].rolling(window=5, min_periods=1, center=False).mean()
+        df_ball_detections['delta_y'] = df_ball_detections['mid_y_rolling_mean'].diff()
+
+        df_ball_detections['hits'] = 0
+
+        min_frames_for_hit = 25
+        for i in range(1, len(df_ball_detections)-int(min_frames_for_hit*1.2)):
+            neg_change = df_ball_detections['delta_y'].iloc[i] > 0 and df_ball_detections['delta_y'].iloc[i+1] <0
+            pos_change = df_ball_detections['delta_y'].iloc[i] < 0 and df_ball_detections['delta_y'].iloc[i+1] >0
+
+            if neg_change or pos_change:
+                change_count = 0
+                for change_frame in range(i+1, i+int(min_frames_for_hit*1.2)+1):
+                    neg_change_nxt_frame = df_ball_detections['delta_y'].iloc[i] > 0 and df_ball_detections['delta_y'].iloc[change_frame] <0
+                    pos_change_nxt_frame = df_ball_detections['delta_y'].iloc[i] < 0 and df_ball_detections['delta_y'].iloc[change_frame] >0
+
+                    if neg_change and neg_change_nxt_frame:
+                        change_count += 1
+                    elif pos_change and pos_change_nxt_frame:
+                        change_count +=1
+                
+                if change_count>min_frames_for_hit-1:
+                    df_ball_detections['hits'].iloc[i]= 1
+        
+        frames_hits = df_ball_detections[df_ball_detections['hits']==1].index.tolist()
+        return frames_hits
+
     def detect_frames(self, frames, read_from_stub=False, stub_path=None):
         ball_detections = []
 
