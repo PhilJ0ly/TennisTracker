@@ -18,6 +18,7 @@ def main():
     print("Detecting ball...")
     ball_tracker = BallTracker(model_path="models/yolov5_best.pt")
     ball_detections = ball_tracker.detect_frames(video_frames, read_from_stub=True, stub_path="trackers_stubs/ball_detections.pkl")
+    ball_detections = ball_tracker.interpolate_ball(ball_detections)
 
     #detecting keypoints
     print("Detecting court lines...")
