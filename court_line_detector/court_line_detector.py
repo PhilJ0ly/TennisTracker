@@ -28,22 +28,24 @@ class CourtLineDetector:
         kps = outputs.squeeze().cpu().numpy()
         original_h, original_w = img_rgb.shape[:2]
 
-        scale_x = 230.0
-        scale_y = 235.0
+        scale_x, scale_y = 230.0, 235.0
+        x_shift, y_shift = 20, 27
 
         kps[::2] *= original_w/scale_x
+        kps[::2] += x_shift
+
         kps[1::2] *= original_h/scale_y
+        kps[1::2] += y_shift
 
         return kps
     
     def draw_kps(self, image, kps):
-        x_shift, y_shift = 25, 30
         for i in range(0, len(kps), 2):
             x = int(kps[i])
             y = int(kps[i+1])
 
-            cv2.putText(image, str(i//2), (x+x_shift, y-10+y_shift), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
-            cv2.circle(image, (x+x_shift,y+y_shift), 5, (255, 0, 0), -1)
+            cv2.putText(image, str(i//2), (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
+            cv2.circle(image, (x,y), 5, (255, 0, 0), -1)
         return image
     
     def draw_kps_video(self, video_frames, kps):
