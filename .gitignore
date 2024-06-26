@@ -12,3 +12,4 @@ training/tennis-ball-detection-6/
 models/
 __pycache__/
 trackers_stubs/
+pyvenv.cfg
