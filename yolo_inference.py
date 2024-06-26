@@ -2,9 +2,9 @@
 
 from ultralytics import YOLO
 
-model = YOLO('models/key_pts.pt')
+model = YOLO('models/yolov5_best.pt')
 
-result = model.track('input_video/input_video.mp4', conf=0.2, save=True)
+result = model.predict('input_video/image.png', conf=0.2, save=True)
 
 # print(result)
 # print("\nBoxes:")

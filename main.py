@@ -1,6 +1,7 @@
 from utils import (read_video,
                    save_video)
 from trackers import PlayerTracker, BallTracker
+from court_line_detector import CourtLineDetector
 
 def main():
     #reading video
@@ -13,10 +14,25 @@ def main():
     player_tracker = PlayerTracker(model_path='yolov8x')
     player_detections = player_tracker.detect_frames(video_frames, read_from_stub=True, stub_path="trackers_stubs/player_detections.pkl")
 
+    #detecting ball
+    print("Detecting ball...")
+    ball_tracker = BallTracker(model_path="models/yolov5_best.pt")
+    ball_detections = ball_tracker.detect_frames(video_frames, read_from_stub=True, stub_path="trackers_stubs/ball_detections.pkl")
+
+    #detecting keypoints
+    print("Detecting court lines...")
+    court_model_path = "models/key_pts.pth"
+    court_line_detector = CourtLineDetector(model_path=court_model_path)
+    court_kps = court_line_detector.predict(video_frames[0])
+
     # Draw outputs
     print("Drawing Anotations...")
-    ## draw player bbox
+    ## draw player and ball bbox
     output_frames = player_tracker.draw_bboxes(video_frames, player_detections)
+    output_frames = ball_tracker.draw_bboxes(output_frames, ball_detections)
+
+    ## Draw court lines
+    output_frames = court_line_detector.draw_kps_video(output_frames, court_kps)
 
     # Save video
     print("Saving Video...")

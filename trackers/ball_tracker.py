@@ -25,8 +25,7 @@ class BallTracker:
         return ball_detections
 
     def detect_frame(self, frame):
-        results = self.model.predict(frame, conf=0.15, persist=True)[0]
-        id_name_dict = results.names
+        results = self.model.predict(frame, conf=0.15)[0]
 
         ball_dict = {}
         for box in results.boxes:
@@ -41,8 +40,8 @@ class BallTracker:
             # draw bboxes
             for track_id, bbox in ball_dict.items():
                 x1, y1, x2, y2 = bbox
-                cv2.putText(frame, f"Ball ID: {track_id}", (int(bbox[0]), int(bbox[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                frame = cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                cv2.putText(frame, f"Ball ID: {track_id}", (int(bbox[0]), int(bbox[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                frame = cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
             output_frames.append(frame)
 
         return output_frames
