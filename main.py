@@ -1,7 +1,13 @@
 import cv2
+from copy import deepcopy
+import pandas as pd
 
 from utils import (read_video,
-                   save_video)
+                   save_video,
+                   measure_dist,
+                   convert_pixel_distance_to_meters,
+                   draw_player_stats)
+import constants
 from trackers import PlayerTracker, BallTracker
 from court_line_detector import CourtLineDetector
 from mini_court import MiniCourt
@@ -37,10 +43,63 @@ def main():
     #detecting ball hits
     print("Detecting shots...")
     ball_shot_frames = ball_tracker.get_ball_shot_frames(ball_detections)
-    print(ball_shot_frames)
 
     #converting positions to mini court positions
     player_mini_court_positions, ball_mini_court_positions = mini_court.convert_bbox_to_coord(player_detections, ball_detections, court_kps)
+
+    #getting shots, ball speeds, and player speeds
+    player_stats = [{
+        'frame_num':0,
+        'player_1_number_of_shots':0,
+        'player_1_total_shot_speed':0,
+        'player_1_last_shot_speed':0,
+        'player_1_total_speed':0,
+        'player_1_last_speed':0,
+        'player_2_number_of_shots':0,
+        'player_2_total_shot_speed':0,
+        'player_2_last_shot_speed':0,
+        'player_2_total_speed':0,
+        'player_2_last_speed':0,
+    }]
+
+    for ball_shot_ind in range(len(ball_shot_frames)-1):
+        start_frame = ball_shot_frames[ball_shot_ind]
+        end_frame = ball_shot_frames[ball_shot_ind+1]
+        delta_t = ((end_frame-start_frame)/24) #24fps
+
+        distance_covered_ball_pxls = measure_dist(ball_mini_court_positions[start_frame][1], ball_mini_court_positions[end_frame][1])
+        distance_covered_ball_meters = convert_pixel_distance_to_meters(distance_covered_ball_pxls, constants.DOUBLE_LINE_WIDTH, mini_court.get_width_of_mini_court())
+        speed_ball_shot = distance_covered_ball_meters/delta_t * 3.6 #km/h
+        
+        player_positions = player_mini_court_positions[start_frame]
+        player_shot_ball = min(player_positions.keys(), key=lambda player_id: measure_dist(player_positions[player_id], ball_mini_court_positions[start_frame][1]))
+
+        opponent_player_id = 1 if player_shot_ball ==2 else 2
+        distance_covered_opponent_pxls = measure_dist(player_mini_court_positions[start_frame][opponent_player_id], player_mini_court_positions[end_frame][opponent_player_id])
+        distance_covered_opponent_meters = convert_pixel_distance_to_meters(distance_covered_opponent_pxls, constants.DOUBLE_LINE_WIDTH, mini_court.get_width_of_mini_court())
+        speed_opponent = distance_covered_opponent_meters/delta_t * 3.6 #km/h
+
+        current_player_stats = deepcopy(player_stats[-1])
+        current_player_stats['frame_num'] = start_frame
+        current_player_stats[f'player_{player_shot_ball}_number_of_shots'] += 1
+        current_player_stats[f'player_{player_shot_ball}_total_shot_speed'] += speed_ball_shot
+        current_player_stats[f'player_{player_shot_ball}_last_shot_speed'] = speed_ball_shot
+
+        current_player_stats[f'player_{opponent_player_id}_total_speed'] += speed_opponent
+        current_player_stats[f'player_{opponent_player_id}_last_speed'] = speed_opponent
+
+        player_stats.append(current_player_stats)
+
+    player_stats_df = pd.DataFrame(player_stats)
+    frames_df = pd.DataFrame({"frame_num":list(range(len(video_frames)))})
+    player_stats_df = pd.merge(frames_df, player_stats_df, on='frame_num', how='left')
+    player_stats_df = player_stats_df.ffill()
+
+    player_stats_df['player_1_average_shot_speed'] = player_stats_df["player_1_total_shot_speed"]/player_stats_df["player_1_number_of_shots"]
+    player_stats_df['player_2_average_shot_speed'] = player_stats_df["player_2_total_shot_speed"]/player_stats_df["player_2_number_of_shots"]
+
+    player_stats_df['player_1_average_speed'] = player_stats_df["player_1_total_speed"]/player_stats_df["player_2_number_of_shots"]
+    player_stats_df['player_2_average_speed'] = player_stats_df["player_2_total_speed"]/player_stats_df["player_1_number_of_shots"]
 
     # Draw outputs
     print("Drawing Anotations...")
@@ -56,6 +115,8 @@ def main():
     output_frames = mini_court.draw_points(output_frames, player_mini_court_positions, color=(0,0,255))
     output_frames = mini_court.draw_points(output_frames, ball_mini_court_positions, color=(0,255,255))
 
+    ## Draw stats
+    output_frames = draw_player_stats(output_frames, player_stats_df)
 
     ## Draw frame number
     for i, frame in enumerate(output_frames):
